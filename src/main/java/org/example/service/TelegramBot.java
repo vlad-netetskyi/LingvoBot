@@ -119,7 +119,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (callbackData.equals(NEXT_WORD)) {
                 var word = getRandomWord();
 
-                word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, getRandomWord()));
+                //word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, getRandomWord()));
+                word.ifPresent(randomWord -> addButtonAndEditMessage(chatId, getRandomWord(), update.getCallbackQuery().getMessage().getMessageId()));
             }
         }
     }
@@ -154,6 +155,33 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         userRepository.save(user);
         executeMessage(message);
+    }
+
+    private void addButtonAndEditMessage(long chatId, Optional<Word> word, Integer messageId) {
+        EditMessageText message = new EditMessageText();
+        message.setChatId(chatId);
+        message.setText(word.get().getEngName() + " - " + word.get().getUaName());
+        message.setMessageId(messageId);
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+        InlineKeyboardButton inLineKeyboardButton = new InlineKeyboardButton();
+        inLineKeyboardButton.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :book:"));
+        rowInLine.add(inLineKeyboardButton);
+        rowsInline.add(rowInLine);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        User user = userRepository.findById(chatId).orElse(new User());
+        if (user.getChatId() == chatId) {
+            long currentStatistic = user.getStatistic();
+            user.setStatistic(currentStatistic + 1);
+        }
+
+        userRepository.save(user);
+        executeEditMessage(message);
     }
 
     private void registerUser(Message message) {
@@ -216,6 +244,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void executeMessage(SendMessage message) {
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            log.error(ERROR_TEXT + e.getMessage());
+        }
+    }
+
+    private void executeEditMessage(EditMessageText message) {
         try {
             execute(message);
         } catch (TelegramApiException e) {
