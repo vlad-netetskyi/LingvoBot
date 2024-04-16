@@ -1,12 +1,15 @@
 package org.example.model;
 
-import org.glassfish.grizzly.http.util.TimeStamp;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import lombok.Data;
+import lombok.ToString;
 
-import javax.persistence.Entity;
-import javax.persistence.Id;
 import java.sql.Timestamp;
 
 @Entity(name = "users")
+@Data
+@ToString
 public class User {
     @Id
     private Long chatId;
@@ -19,54 +22,5 @@ public class User {
 
     private Timestamp registeredAt;
 
-    public Long getChatId() {
-        return chatId;
-    }
-
-    public void setChatId(Long chatId) {
-        this.chatId = chatId;
-    }
-
-    public String getFirstName() {
-        return firstName;
-    }
-
-    public void setFirstName(String firstName) {
-        this.firstName = firstName;
-    }
-
-    public String getLastName() {
-        return lastName;
-    }
-
-    public void setLastName(String lastName) {
-        this.lastName = lastName;
-    }
-
-    public String getUserName() {
-        return userName;
-    }
-
-    public void setUserName(String userName) {
-        this.userName = userName;
-    }
-
-    public Timestamp getRegisteredAt() {
-        return registeredAt;
-    }
-
-    public void setRegisteredAt(Timestamp registeredAt) {
-        this.registeredAt = registeredAt;
-    }
-
-    @Override
-    public String toString() {
-        return "User{" +
-                "chatId=" + chatId +
-                ", firstName='" + firstName + '\'' +
-                ", lastName='" + lastName + '\'' +
-                ", userName='" + userName + '\'' +
-                ", registeredAt=" + registeredAt +
-                '}';
-    }
+    private long statistic;
 }

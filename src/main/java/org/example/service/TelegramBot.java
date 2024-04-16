@@ -21,10 +21,6 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
@@ -39,27 +35,23 @@ public class TelegramBot extends TelegramLongPollingBot {
     private QuizRepository quizRepository;
     final BotConfig config;
     static final String HELP_TEXT = """
-            This bot is created to learning English with AI.\s
+            My goal is to help you learn English.
+                                                            
+            We can talk, learn NEW WORDS or practice GRAMMAR. I also have daily LESSONS for you. Just write me one of those words to start😉
+                                                            
+            If you have any questions, feedback or something is not working - contact with me themrwaik@gmail.com\s
                         
-            You can execute commands from the main menu on the left or by typing a command:\s
-
-            Type /start to see a welcome message
-
-            Type /mydata to see data stored about yourself
-
-            Type /help to see this message again""";
-    static final String YES_BUTTON = "YES_BUTTON";
-    static final String NO_BUTTON = "NO_BUTTON";
+            You can execute commands from the main menu on the left or by typing a command:""";
     static final String ERROR_TEXT = "Error occurred: ";
 
     public TelegramBot(BotConfig config) {
         this.config = config;
         List<BotCommand> listOfCommands = new ArrayList<>();
-        listOfCommands.add(new BotCommand("/start", "get a welcome message"));
-        listOfCommands.add(new BotCommand("/mydata", "get your data stored"));
-        listOfCommands.add(new BotCommand("/deletedata", "delete my data"));
+        listOfCommands.add(new BotCommand("/start", "restart a bot"));
+        listOfCommands.add(new BotCommand("/stats", "get your statistic"));
         listOfCommands.add(new BotCommand("/help", "info how to use this bot"));
         listOfCommands.add(new BotCommand("/settings", "set your preferences"));
+        listOfCommands.add(new BotCommand("/about", "about a creator"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -87,65 +79,23 @@ public class TelegramBot extends TelegramLongPollingBot {
                 var textToSend = EmojiParser.parseToUnicode(messageText.substring(messageText.indexOf(" ")));
                 var users = userRepository.findAll();
                 for (User user : users) {
-                    prepareAndSendMessage(user.getChatId(), textToSend);
+                    sendMessage(user.getChatId(), textToSend);
                 }
             } else {
                 switch (messageText) {
                     case "/start" -> {
                         registerUser(update.getMessage());
-                        startCommandReceived(chatId, update.getMessage().getChat().getFirstName());
+                        showStart(chatId, update.getMessage().getChat().getFirstName());
                     }
-                    case "/help" -> prepareAndSendMessage(chatId, HELP_TEXT);
-                    case "/register" -> register(chatId);
-                    default -> prepareAndSendMessage(chatId, "sorry, command was not recognized");
+                    case "/help" -> sendMessage(chatId, HELP_TEXT);
+                    default -> sendMessage(chatId, "Sorry, command was not recognized");
                 }
-            }
-        } else if (update.hasCallbackQuery()) {
-            String callbackData = update.getCallbackQuery().getData();
-
-            long messageId = update.getCallbackQuery().getMessage().getMessageId();
-            long chatId = update.getCallbackQuery().getMessage().getChatId();
-
-            if (callbackData.equals(YES_BUTTON)) {
-                String text = "You pressed YES button";
-                executeEditMessageText(text, chatId, messageId);
-            } else if (callbackData.equals(NO_BUTTON)) {
-                String text = "You pressed NO button";
-                executeEditMessageText(text, chatId, messageId);
             }
         }
     }
 
-    private void register(long chatId) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText("Do you really want to register?");
-
-        InlineKeyboardMarkup keyboardMarkup = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInLine = new ArrayList<>();
-        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
-
-        var yesButton = new InlineKeyboardButton();
-        yesButton.setText("Yes");
-        yesButton.setCallbackData(YES_BUTTON);
-
-        var noButton = new InlineKeyboardButton();
-        noButton.setText("No");
-        noButton.setCallbackData(NO_BUTTON);
-
-        rowInLine.add(yesButton);
-        rowInLine.add(noButton);
-
-        rowsInLine.add(rowInLine);
-
-        keyboardMarkup.setKeyboard(rowsInLine);
-        message.setReplyMarkup(keyboardMarkup);
-
-        executeMessage(message);
-    }
 
     private void registerUser(Message message) {
-
         if (userRepository.findById(message.getChatId()).isEmpty()) {
             var chatId = message.getChatId();
             var chat = message.getChat();
@@ -155,22 +105,24 @@ public class TelegramBot extends TelegramLongPollingBot {
             user.setLastName(chat.getLastName());
             user.setUserName(chat.getUserName());
             user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
+            user.setStatistic(0);
 
             userRepository.save(user);
             log.info("user saved: " + user);
         }
     }
 
-    private void startCommandReceived(long chatId, String name) {
+   /* private void startCommandReceived(long chatId, String name) {
         String answer = EmojiParser.parseToUnicode("Hi, " + name + ", nice to meet you!" + " :blush:");
         sendMessage(chatId, answer);
         log.info("Replied to user " + name);
-    }
+    }*/
 
-    private void sendMessage(long chatId, String textToSend) {
+    /*private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
+*//*
 
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -185,9 +137,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         keyboardRows.add(row);
         keyboardMarkup.setKeyboard(keyboardRows);
         message.setReplyMarkup(keyboardMarkup);
+*//*
 
         executeMessage(message);
-    }
+    }*/
 
     private void executeEditMessageText(String text, long chatId, long messageId) {
         EditMessageText message = new EditMessageText();
@@ -209,7 +162,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void prepareAndSendMessage(long chatId, String textToSend) {
+    private void sendMessage(long chatId, String textToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(textToSend);
@@ -224,9 +177,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         for (Quiz quiz : quizzes) {
             for (User user : users) {
-                prepareAndSendMessage(user.getChatId(), quiz.getQuiz());
+                sendMessage(user.getChatId(), quiz.getQuiz());
             }
         }
+    }
 
+    private void showStart(long chatId, String name) {
+        String answer = EmojiParser.parseToUnicode("Hi, " + name + "! :smile:, nice to meet you!" + " :blush:");
+        sendMessage(chatId, answer);
+        log.info("Replied to user " + name);
     }
 }

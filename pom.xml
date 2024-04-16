@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.18</version>
+        <version>3.0.1</version>
     </parent>
 
     <groupId>com.example</groupId>
@@ -16,7 +16,7 @@
 
     <properties>
         <java.version>18</java.version>
-        <telegram-bots>5.6.0</telegram-bots>
+        <telegram-bots>6.3.0</telegram-bots>
     </properties>
 
     <dependencies>

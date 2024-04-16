@@ -1,5 +1,6 @@
 package org.example.config;
 
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.example.service.TelegramBot;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +13,9 @@ import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 
 @Slf4j
 @Component
+@AllArgsConstructor
 public class BotInitializer {
-    @Autowired
+
     TelegramBot bot;
 
     @EventListener({ContextRefreshedEvent.class})
