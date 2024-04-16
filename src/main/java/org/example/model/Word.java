@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 
-@Entity(name = "quizzes")
+@Entity(name = "words")
 @Data
-public class Quiz {
+public class Word {
 
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    private String quiz;
+    private String engName;
+    private String uaName;
 }

@@ -2,5 +2,5 @@ package org.example.model;
 
 import org.springframework.data.repository.CrudRepository;
 
-public interface QuizRepository extends CrudRepository<Quiz, Long> {
+public interface WordRepository extends CrudRepository<Word, Long> {
 }

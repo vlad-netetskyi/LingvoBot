@@ -3,15 +3,14 @@ package org.example.service;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.example.config.BotConfig;
-import org.example.model.Quiz;
-import org.example.model.QuizRepository;
+import org.example.model.Word;
+import org.example.model.WordRepository;
 import org.example.model.User;
 import org.example.model.UserRepository;
 
 import java.sql.Timestamp;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -21,10 +20,14 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.Random;
 
 @Slf4j
 @Component
@@ -32,17 +35,30 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
     @Autowired
-    private QuizRepository quizRepository;
+    private WordRepository wordRepository;
     final BotConfig config;
     static final String HELP_TEXT = """
             My goal is to help you learn English.
                                                             
             We can talk, learn NEW WORDS or practice GRAMMAR. I also have daily LESSONS for you. Just write me one of those words to start😉
                                                             
-            If you have any questions, feedback or something is not working - contact with me themrwaik@gmail.com\s
+            If you have any questions, feedback or something is not working - contact with me themrwaik@gmail.com
                         
             You can execute commands from the main menu on the left or by typing a command:""";
+    static final String ABOUT_TEXT = """
+            Feedback
+                
+            If the bot was useful for you, let me know.
+            Write what you lack in the bot, what you would like to change.
+                
+            I would be grateful if you share the bot with your friends.
+                
+            📮 Contact: @netetskyi
+            📢 Link for friends: @Helping_LingvoBot_bot""";
     static final String ERROR_TEXT = "Error occurred: ";
+    static final String NEXT_WORD = "NEXT_WORD";
+    static final long MAX_WORD_ID_MINUS_ONE = 23;
+
 
     public TelegramBot(BotConfig config) {
         this.config = config;
@@ -50,8 +66,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/start", "restart a bot"));
         listOfCommands.add(new BotCommand("/stats", "get your statistic"));
         listOfCommands.add(new BotCommand("/help", "info how to use this bot"));
-        listOfCommands.add(new BotCommand("/settings", "set your preferences"));
         listOfCommands.add(new BotCommand("/about", "about a creator"));
+        listOfCommands.add(new BotCommand("/word", "learn new word"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -88,12 +104,57 @@ public class TelegramBot extends TelegramLongPollingBot {
                         showStart(chatId, update.getMessage().getChat().getFirstName());
                     }
                     case "/help" -> sendMessage(chatId, HELP_TEXT);
+                    case "/about" -> sendMessage(chatId, ABOUT_TEXT);
+                    case "/stats" -> showStats(chatId);
+                    case "/word" -> {
+                        var word = getRandomWord();
+                        word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, word));
+                    }
                     default -> sendMessage(chatId, "Sorry, command was not recognized");
                 }
+            }
+        } else if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            if (callbackData.equals(NEXT_WORD)) {
+                var word = getRandomWord();
+
+                word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, getRandomWord()));
             }
         }
     }
 
+    private Optional<Word> getRandomWord() {
+        var r = new Random();
+        var randomId = r.nextLong(MAX_WORD_ID_MINUS_ONE) + 1;
+        return wordRepository.findById(randomId);
+    }
+
+    private void addButtonAndSendMessage(long chatId, Optional<Word> word) {
+        SendMessage message = new SendMessage();
+        message.setText(word.get().getEngName() + " - " + word.get().getUaName());
+        message.setChatId(chatId);
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        List<InlineKeyboardButton> rowInLine = new ArrayList<>();
+        InlineKeyboardButton inLineKeyboardButton = new InlineKeyboardButton();
+        inLineKeyboardButton.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :book:"));
+        rowInLine.add(inLineKeyboardButton);
+        rowsInline.add(rowInLine);
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        User user = userRepository.findById(chatId).orElse(new User());
+        if (user.getChatId() == chatId) {
+            long currentStatistic = user.getStatistic();
+            user.setStatistic(currentStatistic + 1);
+        }
+
+        userRepository.save(user);
+        executeMessage(message);
+    }
 
     private void registerUser(Message message) {
         if (userRepository.findById(message.getChatId()).isEmpty()) {
@@ -170,21 +231,37 @@ public class TelegramBot extends TelegramLongPollingBot {
         executeMessage(message);
     }
 
-    @Scheduled(cron = "${cron.scheduler}")
-    private void sendQuiz() {
-        var quizzes = quizRepository.findAll();
+    //@Scheduled(cron = "${cron.scheduler}")
+    private void sendQuizWord() {
+        var words = wordRepository.findAll();
         var users = userRepository.findAll();
 
-        for (Quiz quiz : quizzes) {
+        for (Word word : words) {
             for (User user : users) {
-                sendMessage(user.getChatId(), quiz.getQuiz());
+                var translation = word.getEngName() + " - " + word.getUaName();
+                sendMessage(user.getChatId(), translation);
+
             }
         }
+    }
+
+    private void sendWord(long chatId, Word wordToSend) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(wordToSend.getEngName() + " - " + wordToSend.getUaName());
+
+        executeMessage(message);
     }
 
     private void showStart(long chatId, String name) {
         String answer = EmojiParser.parseToUnicode("Hi, " + name + "! :smile:, nice to meet you!" + " :blush:");
         sendMessage(chatId, answer);
         log.info("Replied to user " + name);
+    }
+
+    private void showStats(long chatId) {
+        String stats = EmojiParser.parseToUnicode(":book: Vocabulary: " + userRepository.findById(chatId).get().getStatistic());
+        sendMessage(chatId, stats);
+
     }
 }
