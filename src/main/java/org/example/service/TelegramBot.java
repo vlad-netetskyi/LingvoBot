@@ -3,12 +3,15 @@ package org.example.service;
 import com.vdurmont.emoji.EmojiParser;
 import lombok.extern.slf4j.Slf4j;
 import org.example.config.BotConfig;
+import org.example.model.Quiz;
+import org.example.model.QuizRepository;
 import org.example.model.User;
 import org.example.model.UserRepository;
 
 import java.sql.Timestamp;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
@@ -32,6 +35,8 @@ import java.util.List;
 public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private QuizRepository quizRepository;
     final BotConfig config;
     static final String HELP_TEXT = """
             This bot is created to learning English with AI.\s
@@ -210,5 +215,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setText(textToSend);
 
         executeMessage(message);
+    }
+
+    @Scheduled(cron = "${cron.scheduler}")
+    private void sendQuiz() {
+        var quizzes = quizRepository.findAll();
+        var users = userRepository.findAll();
+
+        for (Quiz quiz : quizzes) {
+            for (User user : users) {
+                prepareAndSendMessage(user.getChatId(), quiz.getQuiz());
+            }
+        }
+
     }
 }
