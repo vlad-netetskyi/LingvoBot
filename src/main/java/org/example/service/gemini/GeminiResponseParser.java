@@ -1,5 +1,7 @@
 package org.example.service.gemini;
 
+import org.example.model.Word;
+
 import java.util.ArrayList;
 import java.util.List;
 

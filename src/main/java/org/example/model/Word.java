@@ -12,6 +12,18 @@ public class Word {
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
 
-    private String engName;
-    private String uaName;
+    private String word;
+    private String explanation;
+    private String ukrainianWord;
+
+
+    public Word(String word, String explanation, String ukrainianWord) {
+        this.word = word;
+        this.explanation = explanation;
+        this.ukrainianWord = ukrainianWord;
+    }
+
+    public Word() {
+
+    }
 }

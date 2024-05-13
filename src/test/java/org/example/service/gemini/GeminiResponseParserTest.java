@@ -1,5 +1,6 @@
 package org.example.service.gemini;
 
+import org.example.model.Word;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;

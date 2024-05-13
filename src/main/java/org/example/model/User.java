@@ -23,4 +23,6 @@ public class User {
     private Timestamp registeredAt;
 
     private long statistic;
+
+    private String learningLanguage;
 }

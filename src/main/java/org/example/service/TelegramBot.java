@@ -68,6 +68,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/help", "info how to use this bot"));
         listOfCommands.add(new BotCommand("/about", "about a creator"));
         listOfCommands.add(new BotCommand("/word", "learn new word"));
+        listOfCommands.add(new BotCommand("/language", "set language for leaning"));
+        listOfCommands.add(new BotCommand("/talk", "just talk, like people do"));
+        listOfCommands.add(new BotCommand("/grammar", "practice grammar"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -105,7 +108,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                     }
                     case "/help" -> sendMessage(chatId, HELP_TEXT);
                     case "/about" -> sendMessage(chatId, ABOUT_TEXT);
+                    case "/language" -> showLanguage(chatId);
                     case "/stats" -> showStats(chatId);
+                    case "/talk" -> talkWithAI(chatId);
                     case "/word" -> {
                         var word = getRandomWord();
                         word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, word));
@@ -133,7 +138,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void addButtonAndSendMessage(long chatId, Optional<Word> word) {
         SendMessage message = new SendMessage();
-        message.setText(word.get().getEngName() + " - " + word.get().getUaName());
+        message.setText(word.get().getWord() + " - " + word.get().getUkrainianWord());
         message.setChatId(chatId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -141,8 +146,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> rowInLine = new ArrayList<>();
         InlineKeyboardButton inLineKeyboardButton = new InlineKeyboardButton();
         inLineKeyboardButton.setCallbackData(NEXT_WORD);
-        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :book:"));
+        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :smile:"));
         rowInLine.add(inLineKeyboardButton);
+        InlineKeyboardButton inLineKeyboardButton1 = new InlineKeyboardButton();
+        inLineKeyboardButton1.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton1.setText(EmojiParser.parseToUnicode("Add to dictionary :book:"));
+        rowInLine.add(inLineKeyboardButton1);
         rowsInline.add(rowInLine);
         markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
@@ -160,7 +169,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void addButtonAndEditMessage(long chatId, Optional<Word> word, Integer messageId) {
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId);
-        message.setText(word.get().getEngName() + " - " + word.get().getUaName());
+        message.setText(word.get().getWord() + " - " + word.get().getUkrainianWord());
         message.setMessageId(messageId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -168,7 +177,11 @@ public class TelegramBot extends TelegramLongPollingBot {
         List<InlineKeyboardButton> rowInLine = new ArrayList<>();
         InlineKeyboardButton inLineKeyboardButton = new InlineKeyboardButton();
         inLineKeyboardButton.setCallbackData(NEXT_WORD);
-        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :book:"));
+        inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :smile:"));
+        InlineKeyboardButton inLineKeyboardButton1 = new InlineKeyboardButton();
+        inLineKeyboardButton1.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton1.setText(EmojiParser.parseToUnicode("Add to dictionary :book:"));
+        rowInLine.add(inLineKeyboardButton1);
         rowInLine.add(inLineKeyboardButton);
         rowsInline.add(rowInLine);
         markupInline.setKeyboard(rowsInline);
@@ -274,7 +287,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         for (Word word : words) {
             for (User user : users) {
-                var translation = word.getEngName() + " - " + word.getUaName();
+                var translation = word.getWord() + " - " + word.getUkrainianWord();
                 sendMessage(user.getChatId(), translation);
 
             }
@@ -284,7 +297,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sendWord(long chatId, Word wordToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText(wordToSend.getEngName() + " - " + wordToSend.getUaName());
+        message.setText(wordToSend.getWord() + " - " + wordToSend.getUkrainianWord());
 
         executeMessage(message);
     }
@@ -296,8 +309,56 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void showStats(long chatId) {
-        String stats = EmojiParser.parseToUnicode(":book: Vocabulary: " + userRepository.findById(chatId).get().getStatistic());
+        String stats = EmojiParser.parseToUnicode(":book: Vocabulary: " + userRepository.findById(chatId).get().getStatistic()) + "\n" +
+                "⏰ Practiced: 1 day";
         sendMessage(chatId, stats);
+
+    }
+
+    private void showLanguage(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Select the language you want to learn:"
+                + "\n1. English 🇬🇧"
+                + "\n2. German 🇩🇪"
+                + "\n3. French 🇫🇷");
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        // Row 1: English button
+        List<InlineKeyboardButton> row1 = new ArrayList<>();
+        InlineKeyboardButton buttonEnglish = new InlineKeyboardButton();
+        buttonEnglish.setText("English 🇬🇧");
+        buttonEnglish.setCallbackData("SET_LANGUAGE_ENGLISH"); // Define callback data for English
+        row1.add(buttonEnglish);
+        rowsInline.add(row1);
+
+        // Row 2: German button
+        List<InlineKeyboardButton> row2 = new ArrayList<>();
+        InlineKeyboardButton buttonGerman = new InlineKeyboardButton();
+        buttonGerman.setText("German 🇩🇪");
+        buttonGerman.setCallbackData("SET_LANGUAGE_GERMAN"); // Define callback data for German
+        row2.add(buttonGerman);
+        rowsInline.add(row2);
+
+        // Row 3: French button
+        List<InlineKeyboardButton> row3 = new ArrayList<>();
+        InlineKeyboardButton buttonFrench = new InlineKeyboardButton();
+        buttonFrench.setText("French 🇫🇷");
+        buttonFrench.setCallbackData("SET_LANGUAGE_FRENCH"); // Define callback data for French
+        row3.add(buttonFrench);
+        rowsInline.add(row3);
+
+        markupInline.setKeyboard(rowsInline);
+        message.setReplyMarkup(markupInline);
+
+        executeMessage(message);
+
+    }
+
+    private void talkWithAI(long chatId) {
+
 
     }
 }
