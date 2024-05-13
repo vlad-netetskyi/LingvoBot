@@ -128,6 +128,29 @@ public class TelegramBot extends TelegramLongPollingBot {
                 word.ifPresent(randomWord -> addButtonAndEditMessage(chatId, getRandomWord(), update.getCallbackQuery().getMessage().getMessageId()));
             }
         }
+        if (update.hasCallbackQuery()) {
+            String callbackData = update.getCallbackQuery().getData();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String learningLanguage;
+
+            switch (callbackData) {
+                case "SET_LANGUAGE_ENGLISH" -> {
+                    learningLanguage = "English";
+                    updateUserLearningLanguage(chatId, learningLanguage);
+                    sendMessage(chatId, "You have selected English as your learning language.");
+                }
+                case "SET_LANGUAGE_GERMAN" -> {
+                    learningLanguage = "German";
+                    updateUserLearningLanguage(chatId, learningLanguage);
+                    sendMessage(chatId, "You have selected German as your learning language.");
+                }
+                case "SET_LANGUAGE_FRENCH" -> {
+                    learningLanguage = "French";
+                    updateUserLearningLanguage(chatId, learningLanguage);
+                    sendMessage(chatId, "You have selected French as your learning language.");
+                }
+            }
+        }
     }
 
     private Optional<Word> getRandomWord() {
@@ -207,6 +230,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             user.setLastName(chat.getLastName());
             user.setUserName(chat.getUserName());
             user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
+            user.setLearningLanguage("English");
             user.setStatistic(0);
 
             userRepository.save(user);
@@ -326,27 +350,24 @@ public class TelegramBot extends TelegramLongPollingBot {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
-        // Row 1: English button
         List<InlineKeyboardButton> row1 = new ArrayList<>();
         InlineKeyboardButton buttonEnglish = new InlineKeyboardButton();
         buttonEnglish.setText("English 🇬🇧");
-        buttonEnglish.setCallbackData("SET_LANGUAGE_ENGLISH"); // Define callback data for English
+        buttonEnglish.setCallbackData("SET_LANGUAGE_ENGLISH");
         row1.add(buttonEnglish);
         rowsInline.add(row1);
 
-        // Row 2: German button
         List<InlineKeyboardButton> row2 = new ArrayList<>();
         InlineKeyboardButton buttonGerman = new InlineKeyboardButton();
         buttonGerman.setText("German 🇩🇪");
-        buttonGerman.setCallbackData("SET_LANGUAGE_GERMAN"); // Define callback data for German
+        buttonGerman.setCallbackData("SET_LANGUAGE_GERMAN");
         row2.add(buttonGerman);
         rowsInline.add(row2);
 
-        // Row 3: French button
         List<InlineKeyboardButton> row3 = new ArrayList<>();
         InlineKeyboardButton buttonFrench = new InlineKeyboardButton();
         buttonFrench.setText("French 🇫🇷");
-        buttonFrench.setCallbackData("SET_LANGUAGE_FRENCH"); // Define callback data for French
+        buttonFrench.setCallbackData("SET_LANGUAGE_FRENCH");
         row3.add(buttonFrench);
         rowsInline.add(row3);
 
@@ -354,7 +375,12 @@ public class TelegramBot extends TelegramLongPollingBot {
         message.setReplyMarkup(markupInline);
 
         executeMessage(message);
+    }
 
+    private void updateUserLearningLanguage(long chatId, String language) {
+        User user = userRepository.findById(chatId).orElse(new User());
+        user.setLearningLanguage(language);
+        userRepository.save(user);
     }
 
     private void talkWithAI(long chatId) {
