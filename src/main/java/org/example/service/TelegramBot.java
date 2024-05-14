@@ -101,8 +101,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 for (User user : users) {
                     sendMessage(user.getChatId(), textToSend);
                 }
-            }
-            if (messageText.startsWith("/topic")) {
+            } else if (messageText.startsWith("/topic")) {
                 if (messageText.length() > "/topic ".length()) {
                     try {
                         String topic = messageText.substring(messageText.indexOf("/topic") + "/topic ".length()).trim();
@@ -113,8 +112,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else {
                     sendMessage(update.getMessage().getChatId(), "Error, try to use: /topic + topic for learning(/topic tourism)");
                 }
-            }
-            if (messageText.startsWith("/grammar")) {
+            } else if (messageText.startsWith("/grammar")) {
                 if (messageText.length() > "/grammar ".length()) {
                     try {
                         String text = messageText.substring(messageText.indexOf("/grammar") + "/grammar ".length()).trim();
@@ -179,8 +177,10 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void topic(long chatId, String topic) throws IOException {
+        User user = userRepository.findById(chatId).orElse(new User());
+        String language = user.getLearningLanguage();
         System.out.println(topic);
-        String response = gemini.prompt("write 5 english words with explanations and translation into ukrainian from topic " + topic + " in JSON format. " +
+        String response = gemini.prompt("write 5 " + language + "words with explanations and translation into ukrainian from topic " + topic + " in JSON format. " +
                 "Return only JSON array in using next template [ { \"word\": \"some word\", \"explanation\": \"some explanation\", \"translation\": \"some translation\" }]. Start with \"[\" end with \"]\".");
         System.out.println(response);
         List<Word> words = parser.parse(response);
@@ -197,10 +197,12 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void grammar(long chatId, String text) throws IOException {
+        User user = userRepository.findById(chatId).orElse(new User());
+        String language = user.getLearningLanguage();
         System.out.println(text);
-        String response = gemini.prompt("write whether the sentence: \" " + text + " is grammatically correct, write the grammatically correct sentence and an explanation" +
+        String response = gemini.prompt("write on " + language + "language, whether the sentence: \" " + text + " is grammatically correct, write the grammatically correct sentence and an explanation" +
                 " of why the sentence is correct or incorrect. write answer in JSON format. Return only JSON object in using next template " +
-                "[ { \\\"sentence\\\": \\\"some sentence\\\", \\\"correctSentence\\\": \\\"some correctSentence\\\", \\\"explanation\\\": \\\"some explanation\\\" }]. object JSON should only have 3 fields! Start with \"{\" end with \"}\".if you must use quotes, use only single quotes");
+                "[ { \\\"sentence\\\": \\\"some sentence\\\", \\\"correctSentence\\\": \\\"some correctSentence\\\", \\\"explanation\\\": \\\"some explanation\\\" }]. object JSON should only have 3 fields! Start with \"{\" end with \"}\". Use only <> quotation marks in your answers! ");
         System.out.println(response);
         Grammar grammar = parser.parseGrammar(response);
         System.out.println(grammar);
@@ -384,7 +386,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sendGrammar(long chatId, Grammar grammarToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("❓ Sentence: "+grammarToSend.getSentence() + "\n ✅ Correct sentence: " + grammarToSend.getCorrectSentence() + "\n ❗ Explanation: " + grammarToSend.getExplanation());
+        message.setText("❓ Sentence: " + grammarToSend.getSentence() + "\n ✅ Correct sentence: " + grammarToSend.getCorrectSentence() + "\n ❗ Explanation: " + grammarToSend.getExplanation());
 
         executeMessage(message);
     }
