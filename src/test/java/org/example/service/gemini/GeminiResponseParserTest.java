@@ -1,8 +1,10 @@
 package org.example.service.gemini;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.example.model.Word;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -11,16 +13,45 @@ class GeminiResponseParserTest {
     GeminiResponseParser geminiResponseParser = new GeminiResponseParser();
 
     @Test
-    public void parseFiveWordsWithExplanationAndTranslation() {
-        String geminiResponse = "1. **Tourist** - a person who travels for pleasure or recreation - \\320\\242\\321\\203\\321\\200\\320\\270\\321\\201\\321\\202\\n2. **Destination** - a place to which one is going or traveling - \\320\\234\\321\\226\\321\\201\\321\\206\\320\\265 \\320\\277\\321\\200\\320\\270\\320\\267\\320\\275\\320\\260\\321\\207\\320\\265\\320\\275\\320\\275\\321\\217\\n3. **Attraction** - something that draws people to a place - \\320\\242\\321\\203\\321\\200\\320\\270\\321\\201\\321\\202\\320\\270\\321\\207\\320\\275\\320\\260 \\320\\277\\320\\260\\320\\274\\'\\321\\217\\321\\202\\320\\272\\320\\260\\n4. **Accommodation** - a place to stay overnight - \\320\\240\\320\\276\\320\\267\\320\\274\\321\\226\\321\\211\\320\\265\\320\\275\\320\\275\\321\\217\\n5. **Transport** - a means of traveling from one place to another - \\320\\242\\321\\200\\320\\260\\320\\275\\321\\201\\320\\277\\320\\276\\321\\200\\321\\202\"\n";
+    public void parseFiveWordsWithExplanationAndTranslation() throws Exception {
+        String geminiResponse = """
+                [
+                {
+                "word": "sightseeing",
+                "explanation": "The activity of visiting places of interest",
+                "translation": "Огляд визначних пам'яток (Ohliad vyznachnykh pam'yatok)"
+                },
+                {
+                "word": "adventure travel",
+                "explanation": "Travel that involves exciting or risky activities",
+                "explanation_ua": "Подорожі пригодами (Podorozhi pryhodami)",
+                "translation": "Екстремальний туризм (Ekstremalnyi turizm)"
+                },
+                {
+                "word": "cultural heritage",
+                "explanation": "The customs, arts, and social institutions of a particular nation or people",
+                "translation": "Культурна спадщина (Kulturnа spadshchyna)"
+                },
+                {
+                "word": "souvenir",
+                "explanation": "An object that is kept as a reminder of a place or event",
+                "translation": "Сувенір (Suvenyr)"
+                },
+                {
+                "word": "ecotourism",
+                "explanation": "Tourism that is environmentally responsible",
+                "translation": "Екотуризм (Ekoturizm)"
+                }
+                ]""";
+
         List<Word> actualWords = geminiResponseParser.parse(geminiResponse);
         List<Word> expectedWords = List.of(
-                new Word("Tourist", "a person who travels for pleasure or recreation", "Турист"),
-                new Word("Destination", "a place to which one is going or traveling", "Місце призначення"),
-                new Word("Attraction", "something that draws people to a place", "Туристична пам'ятка"),
-                new Word("Accommodation", "a place to stay overnight", "Розміщення"),
-                new Word("Transport", "a means of traveling from one place to another", "Транспорт")
+                new Word("sightseeing", "The activity of visiting places of interest", "Огляд визначних пам'яток (Ohliad vyznachnykh pam'yatok)"),
+                new Word("adventure travel", "Travel that involves exciting or risky activities", "Екстремальний туризм (Ekstremalnyi turizm)"),
+                new Word("itinerary", "a plan of your journey, showing the places you will visit and the dates you will be there", "Маршрут"),
+                new Word("passport", "an official document that allows you to travel to other countries", "Паспорт"),
+                new Word("visa", "an official document that allows you to enter and stay in a country for a specific period of time", "Віза")
         );
-        assertEquals(expectedWords,actualWords);
+        assertEquals(expectedWords, actualWords);
     }
 }

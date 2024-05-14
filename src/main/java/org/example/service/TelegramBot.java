@@ -8,10 +8,14 @@ import org.example.model.WordRepository;
 import org.example.model.User;
 import org.example.model.UserRepository;
 
+import java.io.IOException;
 import java.sql.Timestamp;
 
+import org.example.service.gemini.Gemini;
+import org.example.service.gemini.GeminiResponseParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.commands.SetMyCommands;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
@@ -24,10 +28,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMa
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Random;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -36,6 +37,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
     @Autowired
     private WordRepository wordRepository;
+    private final Gemini gemini = new Gemini();
+    private final GeminiResponseParser parser = new GeminiResponseParser();
     final BotConfig config;
     static final String HELP_TEXT = """
             My goal is to help you learn English.
@@ -109,6 +112,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                     case "/help" -> sendMessage(chatId, HELP_TEXT);
                     case "/about" -> sendMessage(chatId, ABOUT_TEXT);
                     case "/language" -> showLanguage(chatId);
+                    case "/gemini" -> {
+                        try {
+                            var topic = EmojiParser.parseToUnicode(messageText);
+                            gemini(chatId);
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                     case "/stats" -> showStats(chatId);
                     case "/talk" -> talkWithAI(chatId);
                     case "/word" -> {
@@ -153,6 +164,23 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
+    private void gemini(long chatId) throws IOException {
+        String response = gemini.prompt("write 5 english words with explanations and translation into ukrainian from topic tourism in JSON format. " +
+                "Return only JSON array in using next template [ { \"word\": \"some word\", \"explanation\": \"some explanation\", \"translation\": \"some translation\" }]. Start with \"[\" end with \"]\".");
+        System.out.println(response);
+        List<Word> words = parser.parse(response);
+        System.out.println(words);
+        System.out.println(words.get(0));
+
+        if (CollectionUtils.isEmpty(words)) {
+            sendMessage(chatId, "Some word data is missing. Please try again later.");
+            return;
+        }
+        for (Word word : words) {
+            sendWord(chatId, word);
+        }
+    }
+
     private Optional<Word> getRandomWord() {
         var r = new Random();
         var randomId = r.nextLong(MAX_WORD_ID_MINUS_ONE) + 1;
@@ -161,7 +189,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void addButtonAndSendMessage(long chatId, Optional<Word> word) {
         SendMessage message = new SendMessage();
-        message.setText(word.get().getWord() + " - " + word.get().getUkrainianWord());
+        message.setText(word.get().getWord() + " - " + word.get().getTranslation());
         message.setChatId(chatId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -192,7 +220,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void addButtonAndEditMessage(long chatId, Optional<Word> word, Integer messageId) {
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId);
-        message.setText(word.get().getWord() + " - " + word.get().getUkrainianWord());
+        message.setText(word.get().getWord() + " - " + word.get().getTranslation());
         message.setMessageId(messageId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -311,7 +339,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         for (Word word : words) {
             for (User user : users) {
-                var translation = word.getWord() + " - " + word.getUkrainianWord();
+                var translation = word.getWord() + " - " + word.getTranslation();
                 sendMessage(user.getChatId(), translation);
 
             }
@@ -321,7 +349,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void sendWord(long chatId, Word wordToSend) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText(wordToSend.getWord() + " - " + wordToSend.getUkrainianWord());
+        message.setText(wordToSend.getWord() + " - " + wordToSend.getTranslation() + ". " + wordToSend.getExplanation());
 
         executeMessage(message);
     }

@@ -14,16 +14,25 @@ public class Word {
 
     private String word;
     private String explanation;
-    private String ukrainianWord;
+    private String translation;
 
 
-    public Word(String word, String explanation, String ukrainianWord) {
+    public Word(String word, String explanation, String translation) {
         this.word = word;
         this.explanation = explanation;
-        this.ukrainianWord = ukrainianWord;
+        this.translation = translation;
     }
 
     public Word() {
 
+    }
+
+    @Override
+    public String toString() {
+        return "Word{" +
+                "word='" + word + '\'' +
+                ", explanation='" + explanation + '\'' +
+                ", translation='" + translation + '\'' +
+                '}';
     }
 }
