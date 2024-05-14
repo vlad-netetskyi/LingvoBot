@@ -1,6 +1,7 @@
 package org.example.service.gemini;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.example.model.Grammar;
 import org.example.model.Word;
 import org.junit.jupiter.api.Test;
 
@@ -53,5 +54,20 @@ class GeminiResponseParserTest {
                 new Word("visa", "an official document that allows you to enter and stay in a country for a specific period of time", "Віза")
         );
         assertEquals(expectedWords, actualWords);
+    }
+    @Test
+    public void parseGrammarWithExplanationAndTranslation() throws Exception {
+        String geminiResponse = """
+                  {
+                    "sentence": "i would like to order a pizza with pepperoni and extra cheese",
+                    "correctSentence": "i would like to order a pizza with pepperoni and extra cheese",
+                    "explanation": "The sentence is incorrect because it does not start with a capital letter. The corrected sentence starts with a capital letter and has a period at the end."
+                  }
+                """;
+
+        Grammar actualGrammar = geminiResponseParser.parseGrammar(geminiResponse);
+        Grammar expectedGrammar =   new Grammar("i would like to order a pizza with pepperoni and extra cheese","i would like to order a pizza with pepperoni and extra cheese",
+                "The sentence is incorrect because it does not start with a capital letter. The corrected sentence starts with a capital letter and has a period at the end." );
+        assertEquals(expectedGrammar, actualGrammar);
     }
 }

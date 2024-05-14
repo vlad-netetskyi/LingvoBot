@@ -29,8 +29,9 @@ public class Gemini {
         GenerativeModel model = new GenerativeModel(modelName, vertexAI);
         // GenerateContentResponse response = model.generateContent(text);
         String fullResponse = model.generateContent(text).getCandidates(0).getContent().getParts(0).getText();
-        String response = fullResponse.substring(8, fullResponse.length() - 3);
+        //String response = fullResponse.substring(8, fullResponse.length() - 3);
         //response.getCandidates(0).getContent().getParts(1).get
+        System.out.println(fullResponse);
         return fullResponse;
     }
 }
