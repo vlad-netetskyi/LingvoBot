@@ -70,4 +70,5 @@ class GeminiResponseParserTest {
                 "The sentence is incorrect because it does not start with a capital letter. The corrected sentence starts with a capital letter and has a period at the end." );
         assertEquals(expectedGrammar, actualGrammar);
     }
+
 }

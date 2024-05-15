@@ -32,6 +32,12 @@ public class GeminiResponseParser {
         System.out.println(objectMapper.readValue(geminiText, Grammar.class));
         return objectMapper.readValue(geminiText,Grammar.class);
     }
+    public String parseDialog(String geminiText) throws JsonProcessingException {
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        System.out.println(geminiText);
+       return geminiText;
+    }
 }
 
 

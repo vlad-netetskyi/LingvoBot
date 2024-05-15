@@ -57,6 +57,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             📢 Link for friends: @Helping_LingvoBot_bot""";
     static final String ERROR_TEXT = "Error occurred: ";
     static final String NEXT_WORD = "NEXT_WORD";
+    private static final String ADD_TO_DICTIONARY = "ADD_TO_DICTIONARY";
     static final long MAX_WORD_ID_MINUS_ONE = 23;
 
 
@@ -69,9 +70,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         listOfCommands.add(new BotCommand("/about", "about a creator"));
         listOfCommands.add(new BotCommand("/word", "learn new word"));
         listOfCommands.add(new BotCommand("/language", "set language for leaning"));
-        listOfCommands.add(new BotCommand("/talk", "just talk, like people do"));
         listOfCommands.add(new BotCommand("/grammar", "grammar analysis (/grammar i like pizza)"));
         listOfCommands.add(new BotCommand("/topic", "get 5 words on your topic (/topic cars)"));
+        listOfCommands.add(new BotCommand("/talk", "just talk, like people do"));
         try {
             this.execute(new SetMyCommands(listOfCommands, new BotCommandScopeDefault(), null));
         } catch (TelegramApiException e) {
@@ -123,6 +124,21 @@ public class TelegramBot extends TelegramLongPollingBot {
                 } else {
                     sendMessage(update.getMessage().getChatId(), "Error, try to use: /grammar + sentence for grammar analysis(/grammar i like pizza)");
                 }
+            } else if (messageText.startsWith("/talk")) {
+                if (messageText.length() > "/talk ".length()) {
+                    try {
+                        String text = messageText.substring(messageText.indexOf("/talk") + "/talk ".length()).trim();
+                        if (text.equalsIgnoreCase("exit")) {
+                            sendMessage(update.getMessage().getChatId(), "Goodbye! See you next time.");
+                            return;  // Exit the handler if user enters "exit"
+                        }
+                        talk(chatId, text);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                } else {
+                    sendMessage(update.getMessage().getChatId(), "Error, try to use: /talk + sentence for grammar analysis(/talk hello!)");
+                }
             } else {
                 switch (messageText) {
                     case "/start" -> {
@@ -133,7 +149,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                     case "/about" -> sendMessage(chatId, ABOUT_TEXT);
                     case "/language" -> showLanguage(chatId);
                     case "/stats" -> showStats(chatId);
-                    case "/talk" -> talkWithAI(chatId);
                     case "/word" -> {
                         var word = getRandomWord();
                         word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, word));
@@ -144,10 +159,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         } else if (update.hasCallbackQuery()) {
             String callbackData = update.getCallbackQuery().getData();
             long chatId = update.getCallbackQuery().getMessage().getChatId();
+            String text = update.getCallbackQuery().getMessage().getText();
             if (callbackData.equals(NEXT_WORD)) {
                 var word = getRandomWord();
+                word.ifPresent(randomWord -> addButtonAndEditMessage(chatId, getRandomWord(), update.getCallbackQuery().getMessage().getMessageId()));
+            }
+            if (callbackData.equals(ADD_TO_DICTIONARY)) {
+                sendMessage(chatId, "Add to dictionary");
+                System.out.println(text);
 
-                //word.ifPresent(randomWord -> addButtonAndSendMessage(chatId, getRandomWord()));
+                var word = getRandomWord();
                 word.ifPresent(randomWord -> addButtonAndEditMessage(chatId, getRandomWord(), update.getCallbackQuery().getMessage().getMessageId()));
             }
         }
@@ -174,6 +195,16 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             }
         }
+    }
+
+    private void talk(long chatId, String text) throws IOException {
+        User user = userRepository.findById(chatId).orElse(new User());
+        String language = user.getLearningLanguage();
+        String response = gemini.prompt("Imagine that I am your friend who communicates only in " + language + " language. Your job is to text me back. " +
+                "My message is as follows: " + text);
+        System.out.println(response);
+
+        sendMessage(chatId, response);
     }
 
     private void topic(long chatId, String topic) throws IOException {
@@ -218,7 +249,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void addButtonAndSendMessage(long chatId, Optional<Word> word) {
         SendMessage message = new SendMessage();
-        message.setText(word.get().getWord() + " - " + word.get().getTranslation());
+        message.setText(word.get().getWord() + " - " + word.get().getTranslation() + " - " + word.get().getExplanation());
         message.setChatId(chatId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -229,7 +260,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :smile:"));
         rowInLine.add(inLineKeyboardButton);
         InlineKeyboardButton inLineKeyboardButton1 = new InlineKeyboardButton();
-        inLineKeyboardButton1.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton1.setCallbackData(ADD_TO_DICTIONARY);
         inLineKeyboardButton1.setText(EmojiParser.parseToUnicode("Add to dictionary :book:"));
         rowInLine.add(inLineKeyboardButton1);
         rowsInline.add(rowInLine);
@@ -249,7 +280,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void addButtonAndEditMessage(long chatId, Optional<Word> word, Integer messageId) {
         EditMessageText message = new EditMessageText();
         message.setChatId(chatId);
-        message.setText(word.get().getWord() + " - " + word.get().getTranslation());
+        message.setText(word.get().getWord() + " - " + word.get().getTranslation() + " - " + word.get().getExplanation());
         message.setMessageId(messageId);
 
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
@@ -259,10 +290,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         inLineKeyboardButton.setCallbackData(NEXT_WORD);
         inLineKeyboardButton.setText(EmojiParser.parseToUnicode("Next word :smile:"));
         InlineKeyboardButton inLineKeyboardButton1 = new InlineKeyboardButton();
-        inLineKeyboardButton1.setCallbackData(NEXT_WORD);
+        inLineKeyboardButton1.setCallbackData(ADD_TO_DICTIONARY);
         inLineKeyboardButton1.setText(EmojiParser.parseToUnicode("Add to dictionary :book:"));
-        rowInLine.add(inLineKeyboardButton1);
         rowInLine.add(inLineKeyboardButton);
+        rowInLine.add(inLineKeyboardButton1);
         rowsInline.add(rowInLine);
         markupInline.setKeyboard(rowsInline);
         message.setReplyMarkup(markupInline);
@@ -446,10 +477,5 @@ public class TelegramBot extends TelegramLongPollingBot {
         User user = userRepository.findById(chatId).orElse(new User());
         user.setLearningLanguage(language);
         userRepository.save(user);
-    }
-
-    private void talkWithAI(long chatId) {
-
-
     }
 }
